@@ -1,0 +1,114 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Template CF para a custom VPC - vpc-cf-us-east-1-340623154105-sandbox-dlh
+
+#Metadata:
+
+#Parameters:
+
+#Mappings:
+
+#Conditions:
+
+Resources:
+  myVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 192.168.0.0/24
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+
+  igwName:
+    Type: AWS::EC2::InternetGateway
+
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref myVPC
+      InternetGatewayId: !Ref igwName
+
+  subnetName1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: us-east-1a
+      VpcId: !Ref myVPC
+      CidrBlock: 192.168.0.0/25
+
+  subnetName2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: us-east-1c
+      VpcId: !Ref myVPC
+      CidrBlock: 192.168.0.128/25
+
+  routeTableName:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref myVPC
+
+  routeName:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref routeTableName
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref igwName
+
+  routeTableAssocName1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref subnetName1
+      RouteTableId: !Ref routeTableName
+
+  routeTableAssocName2:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref subnetName2
+      RouteTableId: !Ref routeTableName
+
+  secGroupName:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "Security group da VPC by Cloudformation"
+      VpcId: !Ref myVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          CidrIp: 18.211.187.252/32
+          FromPort: 5432
+          ToPort: 5432
+        - IpProtocol: tcp
+          CidrIp: 23.21.5.97/32
+          FromPort: 5432
+          ToPort: 5432
+        - IpProtocol: tcp
+          CidrIp: 18.211.187.252/32
+          FromPort: 5439
+          ToPort: 5439
+        - IpProtocol: tcp
+          CidrIp: 23.21.5.97/32
+          FromPort: 5439
+          ToPort: 5439
+
+  secGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref secGroupName
+      IpProtocol: -1
+      SourceSecurityGroupId: !GetAtt secGroupName.GroupId
+
+Outputs:
+  oSubnetName1:
+    Description: Public Subnet 1 ID
+    Value: !Ref subnetName1
+    Export:
+      Name: !Sub ${AWS::StackName}-oSubnetName1
+
+  oSubnetName2:
+    Description: Public Subnet 2 ID
+    Value: !Ref subnetName2
+    Export:
+      Name: !Sub ${AWS::StackName}-oSubnetName2
+
+  oSecGroupName:
+    Description: Security Group ID
+    Value: !Ref secGroupName
+    Export:
+      Name: !Sub ${AWS::StackName}-oSecGroupName
